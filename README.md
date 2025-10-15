@@ -1,2 +1,2 @@
 # ARES-SLAM
-SLAM implementation for Racing in Extreme Conditions Subteam
+SLAM implementation for the Racing in Extreme Conditions Subteam
