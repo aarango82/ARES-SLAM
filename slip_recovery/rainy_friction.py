@@ -1,18 +1,4 @@
 #!/usr/bin/env python3
-"""
-slip_test_with_hud.py
-
-Spawn a vehicle, attach a downward RGB camera, attach GNSS and collision sensors,
-apply weather + friction, and display a pygame HUD overlay with:
- - Time
- - Linear velocity
- - Yaw rate
- - Wheel angular velocities
- - Current control commands
- - Collision flag
-
-Cleanup is handled in finally.
-"""
 
 import carla
 import random
@@ -26,13 +12,9 @@ import math
 import collections
 from typing import Deque
 
-# ---------- Utility functions / small classes ----------
-
 def get_actor_display_name(actor, truncate=250):
     name = ' '.join(actor.type_id.replace('_', '.').title().split('.')[1:])
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
-
-# ---------- HUD classes (your code, lightly adapted) ----------
 
 class FadingText(object):
     def __init__(self, font, dim, pos):
@@ -52,7 +34,6 @@ class FadingText(object):
     def tick(self, _, clock):
         delta_seconds = 1e-3 * clock.get_time()
         self.seconds_left = max(0.0, self.seconds_left - delta_seconds)
-        # clamp alpha
         alpha = int(min(255, 500.0 * self.seconds_left))
         self.surface.set_alpha(alpha)
 
@@ -105,12 +86,10 @@ class HUD(object):
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
         self.server_fps = self._server_clock.get_fps()
-        # timestamp is a carla.WorldSnapshot timestamp-like object
         try:
             self.frame = timestamp.frame_count
             self.simulation_time = timestamp.elapsed_seconds
         except Exception:
-            # fallback if timestamp doesn't have those attrs
             pass
 
     def tick(self, world, clock):
@@ -130,9 +109,7 @@ class HUD(object):
         if -0.5 > transform.rotation.yaw > -179.5:
             heading += 'W'
 
-        # collision history from our collision sensor wrapper
         colhist = world.collision_sensor.get_collision_history()
-        # ensure colhist len is 200:
         if len(colhist) < 200:
             collision = [0.0] * (200 - len(colhist)) + list(colhist)
         else:
@@ -236,7 +213,7 @@ class HUD(object):
                             rect = pygame.Rect((bar_h_offset, v_offset + 8), (fig * bar_width, 6))
                         pygame.draw.rect(display, (255, 255, 255), rect)
                     item = item[0]
-                if item:  # string
+                if item:
                     surface = self._font_mono.render(item, True, (255, 255, 255))
                     display.blit(surface, (8, v_offset))
                 v_offset += 18
@@ -248,7 +225,6 @@ class HUD(object):
 class CollisionSensor(object):
     def __init__(self, world, vehicle, role_name="slip_test_collision"):
         self._history: Deque[float] = collections.deque(maxlen=200)
-        # Fill initial zeros
         for _ in range(200):
             self._history.append(0.0)
         bp = world.get_blueprint_library().find('sensor.other.collision')
@@ -257,7 +233,6 @@ class CollisionSensor(object):
         self.sensor.listen(lambda event: self._on_collision(event))
 
     def _on_collision(self, event):
-        # push 1.0 for collision on new tick, we keep the deque length fixed
         self._history.append(1.0)
 
     def get_collision_history(self):
@@ -301,12 +276,9 @@ class GnssSensor(object):
 # ---------- Image processing / camera callback ----------
 
 def process_image_to_rgb(image, out_dict):
-    # CARLA image.raw_data is BGRA in many versions; reshape and convert
     array = np.frombuffer(image.raw_data, dtype=np.uint8)
-    # wide case: ensure correct shape
     try:
         array = array.reshape((image.height, image.width, 4))
-        # Keep BGR channels and drop alpha
         bgr = array[:, :, :3]
         # Convert BGR -> RGB
         rgb = bgr[:, :, ::-1]
@@ -316,7 +288,6 @@ def process_image_to_rgb(image, out_dict):
     out_dict['frame'] = rgb
 
 def numpy_to_pygame_surface(frame_numpy):
-    # frame_numpy is H x W x 3 RGB; pygame expects WxHx3
     surf = pygame.surfarray.make_surface(frame_numpy.swapaxes(0, 1))
     return surf
 
@@ -324,12 +295,9 @@ def numpy_to_pygame_surface(frame_numpy):
 
 def get_wheel_angular_velocities(vehicle):
     try:
-        # new CARLA API provides this method
         omegas = vehicle.get_wheel_angular_velocity()
-        # return as list of floats
         return list(omegas)
     except Exception:
-        # Fallback: return zeros with same length as physics_control.wheels
         try:
             wc = vehicle.get_physics_control().wheels
             return [0.0] * len(wc)
@@ -352,7 +320,6 @@ def set_weather(world):
     return weather
 
 def apply_weather_based_friction(vehicle, wetness, precipitation_deposits):
-    # simple scale sample - you can replace with your thesis formulas
     physics_control = vehicle.get_physics_control()
     wheels = physics_control.wheels
     friction_scale = 1.0 - (wetness + precipitation_deposits) / 200.0
@@ -360,7 +327,6 @@ def apply_weather_based_friction(vehicle, wetness, precipitation_deposits):
         w.tire_friction = max(0.2, w.tire_friction * friction_scale)
     physics_control.wheels = wheels
     vehicle.apply_physics_control(physics_control)
-    # Confirm applied
     pc = vehicle.get_physics_control()
     applied = [round(w.tire_friction, 3) for w in pc.wheels]
     print("Applied wheel frictions:", applied)
@@ -378,7 +344,6 @@ def main_pygame_display_loop(world, vehicle, image_data_dict, hud, run_time=20.0
     start_time = time.time()
     try:
         while running and (time.time() - start_time) < run_time:
-            # event handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -397,7 +362,6 @@ def main_pygame_display_loop(world, vehicle, image_data_dict, hud, run_time=20.0
                 surf = pygame.transform.smoothscale(surf, (width, height))
                 display.blit(surf, (0, 0))
             else:
-                # clear to black until frame arrives
                 display.fill((0, 0, 0))
 
             # telemetry
@@ -406,7 +370,6 @@ def main_pygame_display_loop(world, vehicle, image_data_dict, hud, run_time=20.0
             yaw_rate = vehicle.get_angular_velocity().z
             wheel_omegas = get_wheel_angular_velocities(vehicle)
             ctrl = vehicle.get_control()
-            # collision flag: if any history entry > 0.5, consider collision recently
             collision_flag = any([x > 0.5 for x in world.collision_sensor.get_collision_history()[-20:]])
 
             # Build custom info lines (insert at top of HUD info)
@@ -420,12 +383,9 @@ def main_pygame_display_loop(world, vehicle, image_data_dict, hud, run_time=20.0
                 f"Collision recent: {collision_flag}"
             ]
 
-            # tick HUD (this populates hud._info_text)
             hud.tick(world, clock)
 
-            # insert our extra lines at the top (remember to pop after)
             for i, line in enumerate(reversed(extra_lines)):
-                # insert reversed so that first item appears at the top
                 hud._info_text.insert(0, line)
 
             hud.render(display)
@@ -473,9 +433,6 @@ def main():
     if 'Town04' not in world_obj.get_map().name:
         world_obj = client.load_world('Town04')
 
-    # Optional: aggressively cleanup leftovers (careful on shared environment)
-    # destroy_all_actors(world_obj)
-
     random.seed(42)
 
     weather = set_weather(world_obj)
@@ -483,7 +440,6 @@ def main():
     precipitation_deposits = weather.precipitation_deposits
 
     bp_lib = world_obj.get_blueprint_library()
-    # pick a valid vehicle blueprint (fallback if Tesla missing)
     try:
         vehicle_bp = bp_lib.find('vehicle.tesla.model3')
         if vehicle_bp is None:
@@ -505,14 +461,11 @@ def main():
         actor_list.append(vehicle)
         print("Spawned vehicle:", vehicle.type_id)
 
-        # Apply friction scaling (you may substitute with thesis formulas)
         apply_weather_based_friction(vehicle, wetness, precipitation_deposits)
 
         # attach sensors
-        # GNSS
         gnss_sensor = GnssSensor(world_obj, vehicle)
         actor_list.append(gnss_sensor.sensor)
-        # Collision
         collision_sensor = CollisionSensor(world_obj, vehicle)
         actor_list.append(collision_sensor.sensor)
 
@@ -528,17 +481,13 @@ def main():
         actor_list.append(camera)
         print("Attached downward-facing RGB camera")
 
-        # prepare frame storage and attach listener
         image_data = {'frame': None}
         camera.listen(lambda image: process_image_to_rgb(image, image_data))
 
-        # set wrapper attributes so HUD code expects them
-        # we attach player, gnss_sensor, collision_sensor references to world_obj
         world_obj.player = vehicle
         world_obj.gnss_sensor = gnss_sensor
         world_obj.collision_sensor = collision_sensor
 
-        # HUD
         hud = HUD(800, 600)
 
         # start driving
@@ -546,7 +495,6 @@ def main():
         vehicle.apply_control(carla.VehicleControl(throttle=0.7))
         print("Vehicle accelerating...")
 
-        # run display + HUD for a fixed run-time (you can adjust)
         main_pygame_display_loop(world_obj, vehicle, image_data, hud, run_time=18.0)
 
         # perform a controlled turn
@@ -589,7 +537,6 @@ def main():
         for a in actor_list:
             destroy_actor_safe(a)
 
-        # some of our wrapper classes have destroy methods too
         try:
             if collision_sensor is not None:
                 collision_sensor.destroy()
@@ -603,8 +550,6 @@ def main():
 
         time.sleep(0.5)
         print("Cleanup complete.")
-        # do not call sys.exit here if you want to keep REPL alive; otherwise:
-        # sys.exit(0)
 
 if __name__ == "__main__":
     main()
