@@ -1,14 +1,14 @@
 #include <memory>
 
-#include "rclcpp.hpp"
+#include <rclcpp/rclcpp.hpp>
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "sensor_msgs/point_cloud2_iterator.hpp"
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include "lidsor_filter.h"
-#include "utils.h"
+#include "lidar_filter/lidsor_filter.h"
+#include "lidar_filter/utils.h"
 
 using std::placeholders::_1;
 
@@ -35,12 +35,16 @@ LidsorFilter::LidsorFilter() : Node("LidsorFilter") {
       input_topic_, 10, std::bind(&LidsorFilter::filter_pointcloud, this, _1));
 
     publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(output_topic_, 10);
+
+    RCLCPP_INFO(this->get_logger(), "Started Lidar filter node. Listening on topic: %s", input_topic_);
 }
 
 void LidsorFilter::filter_pointcloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
     //Create PCL format for easier processing
     pcl::PointCloud<pcl::PointXYZI>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::fromROSMsg(*msg, *input_cloud);
+
+    RCLCPP_INFO(this->get_logger(), "Input Cloud Size: %d", static_cast<int>(input_cloud->size()));
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr filtrating_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZI>());
@@ -76,7 +80,7 @@ void LidsorFilter::filter_pointcloud(const sensor_msgs::msg::PointCloud2::Shared
     double global_threshold = mean + stddev * s_;
 
     //Remove noise points
-    for (int i = 0; i < filtrating_cloud->points.size(); i++) {
+    for (int i = 0; i < static_cast<int>(filtrating_cloud->points.size()); i++) {
         pcl::PointXYZI point = filtrating_cloud->points.at(i);
 
         double distance = euclidean_distance(pcl::PointXYZI(0, 0, 0), point);
@@ -92,10 +96,21 @@ void LidsorFilter::filter_pointcloud(const sensor_msgs::msg::PointCloud2::Shared
     filtered_cloud->height = 1;
     filtered_cloud->is_dense = true;
 
+    RCLCPP_INFO(this->get_logger(), "Filtered Cloud Size: %d", static_cast<int>(filtered_cloud->size()));
+
     //Convert back to ROS2
     sensor_msgs::msg::PointCloud2 output_cloud_msg;
     pcl::toROSMsg(*filtered_cloud, output_cloud_msg);
     output_cloud_msg.header = msg->header;
+    
 
     publisher_->publish(output_cloud_msg);
+}
+
+int main(int argc, char * argv[])
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<LidsorFilter>());
+  rclcpp::shutdown();
+  return 0;
 }

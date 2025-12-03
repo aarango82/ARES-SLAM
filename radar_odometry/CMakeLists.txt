@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
-project(lidar_filter)
+project(radar_odometry)
+include_directories(include)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -10,13 +11,6 @@ find_package(ament_cmake REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(pcl_ros REQUIRED)
-find_package(pcl_conversions REQUIRED)
-
-find_package(OpenCL REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -29,14 +23,5 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
-
-add_executable(LidsorFilter src/lidsor_filter.cpp src/utils.cpp)
-ament_target_dependencies(LidsorFilter rclcpp sensor_msgs pcl_ros pcl_conversions)
-
-target_include_directories(LidsorFilter PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-install(TARGETS
-  LidsorFilter
-  DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

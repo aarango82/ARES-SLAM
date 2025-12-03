@@ -4,7 +4,7 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include "utils.h"
+#include "lidar_filter/utils.h"
 
 double euclidean_distance(pcl::PointXYZI p1, pcl::PointXYZI p2) {
     double dx = p1.x - p2.x;
