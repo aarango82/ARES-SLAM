@@ -10,6 +10,8 @@
         <arg name="use_mola_gui" value="False" />
     </include>
 
+    <include file="$(find-pkg-share radar_odom)/launch/run.py" />
+
     <node pkg="robot_localization"
         exec="ekf_node"
         name="ekf_filter_node"
