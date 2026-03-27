@@ -1,0 +1,6 @@
+<launch>
+   
+    <!-- Rviz and Lidar Filter - assume lidar itself is publishing itself -->
+    <node pkg="rviz2" exec="rviz2" output="screen" />
+    <node pkg="lidar_filter" exec="LidsorFilter" name="pointercloud_filter_node"/>
+</launch>
