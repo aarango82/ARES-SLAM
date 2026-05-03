@@ -29,7 +29,7 @@ public:
         static_transform_.transform.rotation.w = 1.0;
 
         //Publish------------------------------------------------------------
-        static_tf_broadcaster_->sendTransform(static_transform_);
+//        static_tf_broadcaster_->sendTransform(static_transform_);
     }
 
 private:
@@ -44,7 +44,7 @@ private:
         static_transform_.transform.rotation = msg->pose.pose.orientation;
 
         //Publish-------------------------------------------------------------
-        static_tf_broadcaster_->sendTransform(static_transform_);
+        // static_tf_broadcaster_->sendTransform(static_transform_);
     }
 
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber_;

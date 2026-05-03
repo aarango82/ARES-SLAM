@@ -22,16 +22,37 @@
     <param name="base_link_frame" value="base_link"/>
     <param name="world_frame" value="odom"/>
 
-    <param name="odom0" value="/odom"/>
+    <param name="odom0" value="/radar_odom/odometry"/>
+    <param name="imu0" value="/vectornav/imu"/>
+    <param name="imu0_config" value="[false, false, false,
+                                       true,  true,  true, 
+                                       false, false, false,
+                                       true,  true,  true,
+                                       true,  true,  true]"/>
+    <param name="imu0_relative" value="true"/>
 
-    <param name="odom0_config" value="
+    <param name="twist0" value="/Ego_Vel_Twist"/>
+    <param name="twist0_config" value="[false, false, false,
+                                          false, false, false,
+                                          true,  true,  true,
+                                          true,  true,  true,
+                                          false, false, false]"/>
+
+    <param name="pose0" value="/lidar_odom"/> 
+    <param name="pose0_config" value="[true,  true,  true,
+                                         true,  true,  true,
+                                         false, false, false,
+                                         false, false, false,
+                                         false, false, false]"/>
+    <param name="pose0_differential" value="false"/>
+
+    <param name="publish_tf" value="true"/>    <param name="odom0_config" value="
         [true,  true,  true,
         true,  true,  true,
         true,  true,  true,
         false, false, false,
         false, false, false]"/>
 
-    <param name="publish_tf" value="true"/>
     <param name="frequency" value="50.0"/>
 
     </node>
